@@ -3,12 +3,14 @@
 #include "freertos/task.h"
 #include "GraphicsClient.h"
 
-#define DEBUG_GRAPHICS
+//#define DEBUG_GRAPHICS
 
 #ifdef DEBUG_GRAPHICS
 #define logDebug(x) printf(x)
+#define delayForDebug() delay(1000)
 #else
 #define logDebug(x)
+#define delayForDebug()
 #endif
 #define logInfo(x) printf(x)
 
@@ -34,19 +36,31 @@ static void waitForConnection() {
 static void sender_task(void* args)
 {
     while (1) {
+        static int lastCheck = millis();
+        static int lastFps = 0;
+        static int fpsCount = 0;
+        int now = millis();
+        fpsCount++;
+        if (now - lastCheck > 1000) {
+            lastFps = fpsCount;
+            lastCheck = now;
+            fpsCount = 0;
+            char fps[16];
+            sprintf(fps, "FPS: %d", lastFps);
+            client.setResourceText(1, fps);
+        }
+        
         if (!client.isConnected()) {
             waitForConnection();
         } else {
             logDebug("begin\n");
             client.sceneBegin();
             logDebug("render\n");
-            client.renderText(0, 0, 0, 5);
+            client.renderText(0, 2, 2, 5);
+            client.renderText(1, 2, 12, 5);
             logDebug("end\n");
             client.sceneEnd();
-
-#ifdef DEBUG_GRAPHICS
-            delay(1000);
-#endif
+            delayForDebug()
         }
     }
 }

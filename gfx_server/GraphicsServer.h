@@ -3,6 +3,19 @@
 #include "GraphicsProtocol.h"
 #include "UartClient.h"
 
+//#define DEBUG_GRAPHICS
+
+#ifdef DEBUG_GRAPHICS
+#define logDebug(x) printf(x)
+#define logDebug2(x, y) printf(x, y)
+#define delayForDebug() delay(1000)
+#else
+#define logDebug(x)
+#define logDebug2(x, y)
+#define delayForDebug()
+#endif
+#define logInfo(x) printf(x)
+
 #define ECHO_TEST_TXD  (GPIO_NUM_4)
 #define ECHO_TEST_RXD  (GPIO_NUM_5)
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
@@ -28,36 +41,31 @@ public:
     }
 
     void update(CompositeGraphics& graphics) {
-        static int lastMillis = 0;
-        int t = millis();
-        int fps = 1000 / (t - lastMillis);
-        lastMillis = t;
-
         uint8_t commandCharacter = 0;
         if (uart.readUint8(&commandCharacter)) {
             if (commandCharacter == (uint8_t) Command::INIT) {
-                printf("GraphicsServer: init started\n");
+                logInfo("GraphicsServer: init started\n");
                 uint32_t freeMemory = (uint32_t) heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
                 bool allWritten = sendInitResponse(uart);
                 if (allWritten) {
-                    printf("GraphicsServer: init finished\n");
+                    logInfo("GraphicsServer: init finished\n");
                 } else {
-                    printf("Error: GraphicsServer: init failed\n");
+                    logInfo("Error: GraphicsServer: init failed\n");
                 }
             } else if (commandCharacter == (uint8_t) Command::SCENE_BEGIN) {
-                printf("scene begin\n");
+                logDebug("scene begin\n");
                 sceneStarted = true;
                 graphics.begin(54);
             } else if (commandCharacter == (uint8_t) Command::SCENE_END) {
-                printf("scene end\n");
+                logDebug("scene end\n");
                 graphics.end();
                 sendSceneEndVerification(uart);
                 sceneStarted = false;
             } else if (commandCharacter == (uint8_t) Command::SET_RESOURCE) {
-                printf("set resource\n");
+                logDebug("set resource\n");
                 receiveResource(uart, resources);
             } else if (commandCharacter == (uint8_t) Command::RENDER_TEXT_RESOURCE) { // render text resource
-                printf("render text resource\n");
+                logDebug("render text resource\n");
                 if (sceneStarted) {
                     if (receiveRenderText(uart, renderTextData)) {
                         graphics.setTextColor(renderTextData.color);
@@ -69,7 +77,7 @@ public:
                     }
                 }
             } else {
-                printf("GraphicsServer command not recognized: '%d'\n", commandCharacter);     
+                logDebug2("GraphicsServer command not recognized: '%d'\n", commandCharacter);     
             }
         }
     }
